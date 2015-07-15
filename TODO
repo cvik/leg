@@ -1,0 +1,25 @@
+# leg
+ - [/] universal formatting specification
+    + [X] %t - time
+    + [X] %T - time with micros
+    + [X] %d - date
+    + [X] %m - message
+    + [X] %l - level
+    + [ ] %u - unix seconds
+    + [ ] %y - day of week
+    + [ ] %w - wall clock
+ - [ ] more appenders:
+    + [ ] file appender
+        * rotation on file size and time; handle max files
+    + [ ]  syslog appender
+ - [ ] error logger event handler (handle sasl, cowboy and webmachine logs)
+ - [/] options per appender:
+    + [X] format
+    + [X] colorize: bool
+    + [ ] log-level
+    + [ ] format message length (ex. 1000 -> ~1000p in message format)
+ - [ ] log to single appender only
+ - [ ] set default appenders: all | [atom()]
+ - [ ] set what appender error_logger sends to
+ - [ ] generic log function with level as arg
+ - [ ] log terms, use #{opts=>#{max_line_length=>10000}}
