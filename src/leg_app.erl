@@ -13,6 +13,8 @@
 start(normal, no_arg) ->
     case leg_sup:start_link() of
         {ok, Pid} ->
+            DefaultConsoleAppender = #{type=>leg_appender_console, opts=>#{}},
+            leg_appender_mgr:add_appender(DefaultConsoleAppender),
             {ok, Opts} = application:get_env(leg, sasl_options, {ok, #{}}),
             leg_error_logger_handler:add(Opts),
             {ok, Pid};

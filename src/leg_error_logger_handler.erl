@@ -47,18 +47,20 @@ handle_event(Event, State) ->
     {ok, State}.
 
 write_info_report(progress, [{application, App}, {started_at, Node}]) ->
-    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p started at ~p", [App, Node]);
+    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p started at ~p",
+            [App, Node]);
 write_info_report(progress, Event) ->
-    leg:dbg("SUPERVISOR: ~100000p", [Event]);
+    leg:dbg("\e[1;39mPROGRESS:\e[0m ~100000p", [Event]);
 write_info_report(std_info, [{application,App}, {exited,Reason}|_]) ->
-    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p exited with reason ~p", [App, Reason]);
+    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p exited with reason ~p",
+            [App, Reason]);
 write_info_report(std_info, Event) ->
-    leg:nfo("INFO: ~100000p", [Event]);
+    leg:nfo("~100000p", [Event]);
 write_info_report(Type, Event) ->
     leg:nfo("~p: ~1000000p", [Type, Event]).
 
 write_error_report(std_error, Error) ->
-    leg:err("\e[1;39mERROR:\e[0m ~p", [Error]);
+    leg:err("~p", [Error]);
 write_error_report(crash_report, Error) ->
     leg:err("\e[1;39mCRASH\e[0m ~100000p", [Error]);
 write_error_report(supervisor_report, Error) ->
@@ -81,11 +83,15 @@ code_change(_, State, _) ->
 %% Internal -------------------------------------------------------------------
 
 add_error_handler(Opts) ->
-    Handlers = sys:get_state(whereis(error_logger)),
-    case lists:keymember(?MODULE, 1, Handlers) of
+    clear_error_logger(),
+    case lists:keymember(?MODULE, 1, sys:get_state(error_logger)) of
         true ->
             ok;
         false ->
-            error_logger:add_report_handler(?MODULE, Opts),
-            error_logger:delete_report_handler(sasl_report_tty_h)
+            error_logger:add_report_handler(?MODULE, Opts)
     end.
+
+clear_error_logger() ->
+    Handlers = sys:get_state(error_logger),
+    [error_logger:delete_report_handler(element(1, H)) || H <- Handlers,
+                                                          H /= ?MODULE].
