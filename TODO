@@ -9,12 +9,16 @@
     + [ ] %y - day of week
     + [ ] %w - wall clock
     + [ ] %p - pid
-    + [ ] somehow support specifying color regions
+    + [ ] %a - application
+    + [ ] somehow support specifying color regions (?)
  - [ ] more appenders:
     + [ ] file appender
         * rotation on file size and time; handle max files
     + [ ]  syslog appender
  - [ ] error logger event handler (handle sasl, cowboy and webmachine logs)
+    + [ ] sasl
+    + [ ] webmachine
+    + [ ] cowboy
  - [/] options per appender:
     + [X] format
     + [X] colorize: bool
@@ -24,6 +28,6 @@
  - [ ] set default appenders: all | [atom()]
  - [ ] set what appender error_logger sends to
  - [ ] generic log function with level as arg
- - [ ] log terms, use #{opts=>#{max_line_length=>10000}}
+ - [ ] log terms, use #{opts=>{max_line_length, 10000}}
  - [ ] renamed/named appenders (separate name from module name)
  - [ ] Better handling of setting log-levels dynamically
