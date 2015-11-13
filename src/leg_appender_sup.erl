@@ -20,8 +20,8 @@ start_link() ->
 add_child(Args) ->
     supervisor:start_child(?MODULE, Args).
 
-del_child(Id) ->
-    supervisor:terminate_child(?MODULE, Id).
+del_child(Pid) ->
+    supervisor:terminate_child(?MODULE, Pid).
 
 %% ----------------------------------------------------------------------------
 

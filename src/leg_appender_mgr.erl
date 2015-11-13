@@ -23,16 +23,17 @@ start_link() ->
 
 %% Api ------------------------------------------------------------------------
 
-add_appender(#{type:=T, opts:=#{}} = Appender) when is_atom(T) ->
+add_appender(#{id:=Id, type:=Type, opts:=#{}} = Appender) when is_atom(Type),
+                                                               is_atom(Id) ->
     gen_server:cast(?MODULE, {add_appender, Appender});
 add_appender(_) ->
     {error, badarg}.
 
-del_appender(AppenderType) ->
-    gen_server:cast(?MODULE, {del_appender, AppenderType}).
+del_appender(Id) ->
+    gen_server:cast(?MODULE, {del_appender, Id}).
 
-get_appender(AppenderType) ->
-    gen_server:call(?MODULE, {get_appender, AppenderType}).
+get_appender(Id) ->
+    gen_server:call(?MODULE, {get_appender, Id}).
 
 list_appenders() ->
     gen_server:call(?MODULE, list_appenders).
@@ -42,27 +43,33 @@ list_appenders() ->
 init(_) ->
     {ok, #{appenders=>#{}}}.
 
-handle_call({get_appender, Type}, _, #{appenders:=Appenders} = State) ->
+handle_call({get_appender, Id}, _, #{appenders:=Appenders} = State) ->
     case Appenders of
-        #{Type:=Appender} ->
+        #{Id:=Appender} ->
             {reply, Appender, State};
         _ ->
             {reply, {error, not_found}, State}
     end;
 handle_call(list_appenders, _, #{appenders:=Appenders} = State) ->
-    {reply, maps:keys(Appenders), State};
+    F = fun(Id, #{type:=Type}, M) -> M#{Id=>Type} end,
+    {reply, maps:fold(F, #{}, Appenders), State};
 handle_call(_, _, State) ->
     {noreply, State}.
 
 handle_cast({add_appender, Appender}, #{appenders:=Appenders} = State) ->
-    #{type:=Type, opts:=Opts} = Appender,
+    #{id:=Id, type:=Type, opts:=Opts} = Appender,
     {ok, Pid} = leg_appender:new(Type, Opts),
-    ok = leg_router:add_route(Type, Pid),
-    {noreply, State#{appenders=>Appenders#{Type=>Appender}}};
-handle_cast({del_appender, Type}, #{appenders:=Appenders} = State) ->
-    ok = leg_router:del_route(Type),
-    %% ok = leg_appender:del(Pid),
-    {noreply, State#{appenders=>maps:remove(Type, Appenders)}};
+    ok = leg_router:add_route(Id, Type, Pid),
+    {noreply, State#{appenders=>Appenders#{Id=>Appender#{pid=>Pid}}}};
+handle_cast({del_appender, Id}, #{appenders:=Appenders} = State) ->
+    case Appenders of
+        #{Id:=#{pid:=Pid}} ->
+            ok = leg_router:del_route(Id),
+            ok = leg_appender:del(Pid),
+            {noreply, State#{appenders=>maps:remove(Id, Appenders)}};
+        _ ->
+            {noreply, State}
+    end;
 handle_cast(_, State) ->
     {noreply, State}.
 

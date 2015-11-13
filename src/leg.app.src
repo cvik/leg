@@ -5,6 +5,8 @@
   {applications, [kernel, stdlib]},
   {modules, []},
   {mod, {leg_app, no_arg}},
-  {env, [{default_appender, #{type=>leg_appender_console, opts=>#{}}},
+  {env, [{default_appender, #{id=>default_tty,
+                              type=>leg_appender_console,
+                              opts=>#{}}},
          {levels, #{crit=>1, error=>2, warn=>3, info=>4, debug=>5}}]}
  ]}.

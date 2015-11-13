@@ -17,7 +17,7 @@
 -type appender_opts() :: #{format=>binary(),
                            colorize=>boolean(),
                            timezone=>local|utc}.
--type appender() :: #{type=>atom(), opts=>appender_opts()}.
+-type appender() :: #{id=>atom(), type=>atom(), opts=>appender_opts()}.
 
 %% Management Api -------------------------------------------------------------
 
@@ -34,17 +34,18 @@ set_log_level(Level) ->
     leg_router:set_log_level(Level).
 
 %% Appender Management --------------------------------------------------------
+
 -spec add_appender(appender()) -> ok | {error, atom()}.
 add_appender(Appender) ->
     leg_appender_mgr:add_appender(Appender).
 
 -spec del_appender(atom()) -> ok | {error, atom()}.
-del_appender(AppenderType) ->
-    leg_appender_mgr:del_appender(AppenderType).
+del_appender(AppenderId) ->
+    leg_appender_mgr:del_appender(AppenderId).
 
 -spec get_appender(atom()) -> appender() | {error, atom()}.
-get_appender(AppenderType) ->
-    leg_appender_mgr:get_appender(AppenderType).
+get_appender(AppenderId) ->
+    leg_appender_mgr:get_appender(AppenderId).
 
 -spec list_appenders() -> [atom()] | {error, atom()}.
 list_appenders() ->

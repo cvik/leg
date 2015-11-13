@@ -9,7 +9,7 @@
 -export([start_link/0]).
 
 %% API
--export([add_route/2, del_route/1, dispatch/1, set_log_level/1]).
+-export([add_route/3, del_route/1, dispatch/1, set_log_level/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -22,11 +22,11 @@ start_link() ->
 
 %% Api ------------------------------------------------------------------------
 
-add_route(AppenderType, AppenderPid) ->
-    gen_server:cast(?MODULE, {add_route, AppenderType, AppenderPid}).
+add_route(Id, Type, Pid) ->
+    gen_server:cast(?MODULE, {add_route, Id, Type, Pid}).
 
-del_route(AppenderType) ->
-    gen_server:cast(?MODULE, {del_route, AppenderType}).
+del_route(Id) ->
+    gen_server:cast(?MODULE, {del_route, Id}).
 
 dispatch(Log) ->
     gen_server:cast(?MODULE, {dispatch, Log}).
@@ -47,15 +47,16 @@ init(_) ->
 handle_call(_, _, State) ->
     {noreply, State}.
 
-handle_cast({add_route, Type, Pid}, #{routes:=Routes} = State) ->
-    {noreply, State#{routes:=Routes#{Type=>Pid}}};
-handle_cast({del_route, Type}, #{routes:=Routes} = State) ->
-    {noreply, State#{routes:=maps:remove(Type, Routes)}};
+handle_cast({add_route, Id, Type, Pid}, #{routes:=Routes} = State) ->
+    {noreply, State#{routes:=maps_append(Type, {Id, Pid}, Routes)}};
+handle_cast({del_route, Id}, #{routes:=Routes} = State) ->
+    NewRoutes = maps_del_id(Id, Routes),
+    {noreply, State#{routes:=NewRoutes}};
 handle_cast({dispatch, #{level:=Level} = Log}, State) ->
     #{routes:=Routes, limit:=Limit} = State,
     case should_dispatch(Level, Limit) of
         true ->
-            maps:map(fun(_, Pid) -> leg_appender:write(Pid, Log) end, Routes),
+            dispatch(Log, Routes),
             {noreply, State};
         false ->
             {noreply, State}
@@ -81,9 +82,26 @@ should_dispatch(LevelMsg, LevelLimit) ->
     #{LevelLimit:=OrderLimit} = levels(),
     OrderMsg =< OrderLimit.
 
+dispatch(Log, Routes) ->
+    F = fun(_, Lst) -> [leg_appender:write(Pid, Log) || {_, Pid} <- Lst] end,
+    maps:map(F, Routes).
+
 valid_level(Level) ->
     maps:is_key(Level, levels()).
 
 levels() ->
     {ok, #{} = Levels} = application:get_env(leg, levels),
     Levels.
+
+maps_append(Key, Val, Map) ->
+    case Map of
+        #{Key:=PrevVal} ->
+            Map#{Key:=[Val|PrevVal]};
+        _ ->
+            Map#{Key=>[Val]}
+    end.
+
+maps_del_id(Id, Map) ->
+    Filter = fun({I, _}) -> I /= Id end,
+    NewMap = maps:map(fun(_, Ls) -> lists:filter(Filter, Ls) end, Map),
+    maps:filter(fun(_, []) -> false; (_,_) -> true end, NewMap).
