@@ -55,8 +55,7 @@ handle_cast({dispatch, #{level:=Level} = Log}, State) ->
     #{routes:=Routes, limit:=Limit} = State,
     case should_dispatch(Level, Limit) of
         true ->
-            AppenderPids = maps:values(Routes),
-            [leg_appender:write(Pid, Log) || Pid <- AppenderPids],
+            maps:map(fun(_, Pid) -> leg_appender:write(Pid, Log) end, Routes),
             {noreply, State};
         false ->
             {noreply, State}
