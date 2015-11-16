@@ -11,7 +11,7 @@
 render(Spec, Log, Opts) when is_binary(Spec) ->
     render(binary_to_list(Spec), Log, Opts);
 render(Spec, #{} = Log, #{} = Opts) ->
-    DefaultOpts = #{colorize=>true, timezone=>local},
+    DefaultOpts = #{colorize=>false, timezone=>local},
     parse_spec(Spec, Log, maps:merge(DefaultOpts, Opts)).
 
 %% Internal -------------------------------------------------------------------

@@ -9,5 +9,6 @@
 init(#{}) ->
     {ok, #{}}.
 
-handle_log_message(Message, #{}) ->
-    io:format("~ts~n", [Message]).
+handle_log_message(Message, State) ->
+    io:format("~ts~n", [Message]),
+    {ok, State}.

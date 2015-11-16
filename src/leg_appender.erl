@@ -65,8 +65,8 @@ handle_cast({write, Log}, State) ->
     #{format:=Spec} = Opts,
     Message = leg_format:render(Spec, Log, Opts),
     case catch Type:handle_log_message(Message, ModState) of
-        ok ->
-            {noreply, State};
+        {ok, NewModState} ->
+            {noreply, State#{mod_state:=NewModState}};
         {'EXIT', Reason} ->
             {stop, Reason, State}
     end;
