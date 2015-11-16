@@ -40,5 +40,5 @@ setup_appenders() ->
     end.
 
 setup_error_logger_handler() ->
-    {ok, Opts} = application:get_env(leg, error_logger_opts, {ok, #{}}),
+    Opts = application:get_env(leg, error_logger_opts, #{}),
     leg_error_logger_handler:add(Opts).
