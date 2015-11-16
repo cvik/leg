@@ -1,4 +1,5 @@
 # leg
+ - [X] named appenders (separate name from module name)
  - [/] universal formatting specification
     + [X] %t - time
     + [X] %T - time with micros
@@ -11,12 +12,13 @@
     + [ ] %p - pid
     + [ ] %a - application
     + [ ] somehow support specifying color regions (?)
- - [ ] more appenders:
-    + [ ] file appender
-        * rotation on file size and time; handle max files
+ - [/] more appenders:
+    + [X] file appender
+        * [/] rotation on file size, handle max files
+		* [ ] rotation on time; day or hour
     + [ ]  syslog appender
- - [ ] error logger event handler (handle sasl, cowboy and webmachine logs)
-    + [ ] sasl
+ - [/] error logger event handler (handle sasl, cowboy and webmachine logs)
+    + [X] sasl
     + [ ] webmachine
     + [ ] cowboy
  - [/] options per appender:
@@ -24,10 +26,9 @@
     + [X] colorize: bool
     + [ ] log-level
     + [ ] format message length (ex. 1000 -> ~1000p in message format)
- - [ ] log to single appender only
+ - [ ] log to single appender only (extra argument to log call)
  - [ ] set default appenders: all | [atom()]
  - [ ] set what appender error_logger sends to
  - [ ] generic log function with level as arg
  - [ ] log terms, use #{opts=>{max_line_length, 10000}}
- - [ ] renamed/named appenders (separate name from module name)
  - [ ] Better handling of setting log-levels dynamically
