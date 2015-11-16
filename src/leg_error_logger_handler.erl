@@ -8,7 +8,7 @@
 %% Management API
 -export([add/1, del/0]).
 
-%% gen_server callbacks
+%% gen_event callbacks
 -export([init/1, handle_event/2, handle_call/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -25,48 +25,29 @@ del() ->
 %% gen_server callbacks -------------------------------------------------------
 
 init(Opts) ->
-    {ok, Opts}.
+    {ok, #{opts=>Opts}}.
 
-handle_event({info_report, _, {_, Type, Report}}, State) ->
-    write_info_report(Type, Report),
+handle_event({info_report, _, {_, Type, Report}}, #{opts:=Opts} = State) ->
+    write_info_report(Type, Report, Opts),
     {ok, State};
-handle_event({warning_report, _, {_, Fmt, Args}}, State) ->
+handle_event({warning_report, _, {_, Fmt, Args}}, #{opts:=_Opts} = State) ->
     leg:wrn(Fmt, Args),
     {ok, State};
-handle_event({error_report, _, {_, Type, Report}}, State) ->
-    write_error_report(Type, Report),
+handle_event({error_report, _, {_, Type, Report}}, #{opts:=Opts} = State) ->
+    write_error_report(Type, Report, Opts),
     {ok, State};
-handle_event({info, _, {_, _, Report}}, State) ->
-    leg:nfo("~100000p", [Report]),
+handle_event({info_msg, _, {_, Fmt, Args}}, #{opts:=_Opts} = State) ->
+    leg:nfo(Fmt, Args),
     {ok, State};
-handle_event({error, _, {_, _, Report}}, State) ->
-    leg:err("~100000p", [Report]),
+handle_event({warning_msg, _, {_, Fmt, Args}}, #{opts:=_Opts} = State) ->
+    leg:wrn(Fmt, Args),
     {ok, State};
-handle_event(Event, State) ->
+handle_event({error, _, {_, Fmt, Args}}, #{opts:=_Opts} = State) ->
+    leg:err(Fmt, Args),
+    {ok, State};
+handle_event(Event, #{opts:=_Opts} = State) ->
     leg:wrn("UNKNOWN: ~100000p", [Event]),
     {ok, State}.
-
-write_info_report(progress, [{application, App}, {started_at, Node}]) ->
-    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p started at ~p",
-            [App, Node]);
-write_info_report(progress, Event) ->
-    leg:dbg("\e[1;39mPROGRESS:\e[0m ~100000p", [Event]);
-write_info_report(std_info, [{application,App}, {exited,Reason}|_]) ->
-    leg:nfo("\e[1;39mPROGRESS:\e[0m application ~p exited with reason ~p",
-            [App, Reason]);
-write_info_report(std_info, Event) ->
-    leg:nfo("~100000p", [Event]);
-write_info_report(Type, Event) ->
-    leg:nfo("~p: ~1000000p", [Type, Event]).
-
-write_error_report(std_error, Error) ->
-    leg:err("~p", [Error]);
-write_error_report(crash_report, Error) ->
-    leg:err("\e[1;39mCRASH\e[0m ~100000p", [Error]);
-write_error_report(supervisor_report, Error) ->
-    leg:err("\e[1;39mSUPERVISOR_REPORT\e[0m ~100000p", [Error]);
-write_error_report(Type, Event) ->
-    leg:err("~p: ~100000p", [Type, Event]).
 
 handle_call(_, State) ->
     {noreply, State}.
@@ -95,3 +76,34 @@ clear_error_logger() ->
     Handlers = sys:get_state(error_logger),
     [error_logger:delete_report_handler(element(1, H)) || H <- Handlers,
                                                           H /= ?MODULE].
+
+write_info_report(progress, [{application, App}, {started_at, Node}], Opts) ->
+    log(nfo, "~s: application ~p started at ~p", "PROGRESS", [App, Node], Opts);
+write_info_report(progress, Event, Opts) ->
+    log(dbg, "~s: ~100000p", "PROGRESS", [Event], Opts);
+write_info_report(std_info, [{application,App}, {exited,Reason}|_], Opts) ->
+    log(nfo, "~s: application ~p exited with reason ~p", "PROGRESS",
+        [App, Reason], Opts);
+write_info_report(std_info, Event, Opts) ->
+    log(nfo, "~s: {std_info, ~100000p}", "UNKNOWN", [Event], Opts);
+write_info_report(Fmt, Args, _Opts) when is_list(Fmt) ->
+    leg:nfo(Fmt, Args);
+write_info_report(Type, Event, Opts) ->
+    log(nfo, "~s: {~p, ~100000p}", "UNKNOWN", [Type, Event], Opts).
+
+write_error_report(crash_report, Error, Opts) ->
+    log(err, "~s: ~100000p", "CRASH", [Error], Opts);
+write_error_report(supervisor_report, Error, Opts) ->
+    log(err, "~s: ~100000p", "SUPERVISOR_REPORT", [Error], Opts);
+write_error_report(std_error, Error, Opts) ->
+    log(err, "~s: {std_error, ~p}", "UNKNOWN", [Error], Opts);
+write_error_report(Fmt, Args, _Opts) when is_list(Fmt) ->
+    leg:err(Fmt, Args);
+write_error_report(Type, Event, Opts) ->
+    log(err, "~s: {~p, ~100000p}", "UNKNOWN", [Type, Event], Opts).
+
+log(Lvl, Fmt, Type, Args, Opts) ->
+    leg:Lvl(Fmt, [bold(Type, Opts)|Args]).
+
+bold(Str, #{colorize:=true}) -> ["\e[1;39m", Str, "\e[0m"];
+bold(Str, _) -> Str.
