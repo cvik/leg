@@ -1,6 +1,6 @@
 {application, leg,
  [{description, "Lightweight Erlang Logger"},
-  {vsn, "0.0.1"},
+  {vsn, "0.1.0"},
   {registered, []},
   {applications, [kernel, stdlib]},
   {modules, []},
