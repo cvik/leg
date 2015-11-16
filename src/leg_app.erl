@@ -8,12 +8,14 @@
 %% application callbacks
 -export([start/2, prep_stop/1, stop/1]).
 
+-export([setup_error_logger_handler/0]).
+
 %% application callbacks ------------------------------------------------------
 
 start(normal, no_arg) ->
     case leg_sup:start_link() of
         {ok, Pid} ->
-            setup_default_appender(),
+            setup_appenders(),
             setup_error_logger_handler(),
             {ok, Pid};
         {error, Error} ->
@@ -29,14 +31,14 @@ stop(_) ->
 
 %% Internal -------------------------------------------------------------------
 
-setup_default_appender() ->
-    case application:get_env(leg, default_appender) of
+setup_appenders() ->
+    case application:get_env(leg, appenders) of
         undefined ->
             ok;
-        {ok, #{} = DefaultAppender} ->
-            leg_appender_mgr:add_appender(DefaultAppender)
+        {ok, Appenders} ->
+            [leg_appender_mgr:add_appender(A) || A <- Appenders]
     end.
 
 setup_error_logger_handler() ->
-    {ok, Opts} = application:get_env(leg, sasl_options, {ok, #{}}),
+    {ok, Opts} = application:get_env(leg, error_logger_opts, {ok, #{}}),
     leg_error_logger_handler:add(Opts).
