@@ -1,4 +1,4 @@
-%% Default console appnder plugin
+%% Default console appender plugin
 %%
 -module(leg_appender_console).
 
