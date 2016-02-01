@@ -42,7 +42,7 @@ set_log_level(Level) when is_atom(Level) ->
 %% gen_server callbacks -------------------------------------------------------
 
 init(_) ->
-    {ok, #{routes=>#{}, limit=>info}}.
+    {ok, #{routes=>#{}, limit=>application:get_env(leg, default_level, info)}}.
 
 handle_call(_, _, State) ->
     {noreply, State}.
