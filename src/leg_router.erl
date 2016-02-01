@@ -54,11 +54,13 @@ handle_cast({del_route, Id}, #{routes:=Routes} = State) ->
     {noreply, State#{routes:=NewRoutes}};
 handle_cast({dispatch, #{level:=Level} = Log}, State) ->
     #{routes:=Routes, limit:=Limit} = State,
-    case should_dispatch(Level, Limit) of
+    case catch should_dispatch(Level, Limit) of
         true ->
             dispatch(Log, Routes),
             {noreply, State};
         false ->
+            {noreply, State};
+        {'EXIT', _} ->
             {noreply, State}
     end;
 handle_cast({set_log_level, Level}, State) ->

@@ -11,7 +11,7 @@
          get_appender/1, list_appenders/0]).
 
 %% Logging API
--export([crit/2, err/2, wrn/2, nfo/2, dbg/2]).
+-export([crit/2, err/2, wrn/2, nfo/2, dbg/2, fmt/3]).
 
 -type log_level() :: crit | error | warn | info | debug.
 -type appender_opts() :: #{format=>binary(),
@@ -72,6 +72,10 @@ err(Fmt, Args) ->
 -spec crit(iolist(), [term()]) -> ok.
 crit(Fmt, Args) ->
     leg_router:dispatch(compile_log(crit, Fmt, Args)).
+
+-spec fmt(atom(), iolist(), [term()]) -> ok.
+fmt(Level, Fmt, Args) ->
+    leg_router:dispatch(compile_log(Level, Fmt, Args)).
 
 %% Internal -------------------------------------------------------------------
 
