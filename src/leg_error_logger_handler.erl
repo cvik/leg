@@ -9,8 +9,7 @@
 -export([add/1, del/0]).
 
 %% gen_event callbacks
--export([init/1, handle_event/2, handle_call/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([init/1, handle_event/2, handle_call/2]).
 
 %% Management Api -------------------------------------------------------------
 
@@ -50,16 +49,7 @@ handle_event(Event, #{opts:=_Opts} = State) ->
     {ok, State}.
 
 handle_call(_, State) ->
-    {noreply, State}.
-
-handle_info(_, State) ->
-    {noreply, State}.
-
-terminate(_, _) ->
-    ok.
-
-code_change(_, State, _) ->
-    {ok, State}.
+    {ok, ok, State}.
 
 %% Internal -------------------------------------------------------------------
 
