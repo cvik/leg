@@ -1,6 +1,6 @@
 ## leg - Lightweight Erlang Logger
 
-Requires erlang 18.0 due to its use of maps. Work in progrees.
+Requires erlang 18.0 due to its use of maps. Work in progress.
 
 ## Example usage
 
