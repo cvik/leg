@@ -2,7 +2,7 @@
  [{description, "Lightweight Erlang Logger"},
   {vsn, "0.2.0"},
   {registered, []},
-  {applications, [kernel, stdlib]},
+  {applications, [kernel, stdlib, lejson]},
   {modules, []},
   {mod, {leg_app, no_arg}},
   {env, [{appenders, [#{id=>tty,
