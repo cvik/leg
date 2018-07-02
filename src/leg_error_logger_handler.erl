@@ -73,6 +73,7 @@ add_error_handler(Opts) ->
     end.
 
 clear_error_logger() ->
+    ok = error_logger:start(),
     Handlers = sys:get_state(error_logger),
     [error_logger:delete_report_handler(element(1, H)) || H <- Handlers,
                                                           H /= ?MODULE].
