@@ -58,8 +58,7 @@ handle_call(_, _, State) ->
 
 handle_cast({add_appender, Appender}, #{appenders:=Appenders} = State) ->
     #{id:=Id, type:=Type, opts:=Opts} = Appender,
-    {ok, Pid} = leg_appender:new(Type, Opts),
-    ok = leg_router:add_route(Id, Type, Pid),
+    {ok, Pid} = leg_appender:new(Id, Type, Opts),
     {noreply, State#{appenders=>Appenders#{Id=>Appender#{pid=>Pid}}}};
 handle_cast({del_appender, Id}, #{appenders:=Appenders} = State) ->
     case Appenders of

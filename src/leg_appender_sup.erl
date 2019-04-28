@@ -27,7 +27,7 @@ del_child(Pid) ->
 
 init(no_arg) ->
     Appender = child(leg_appender, leg_appender, worker, []),
-    Strategy = {simple_one_for_one, 1, 60},
+    Strategy = {simple_one_for_one, 1000, 1},
     {ok, {Strategy, [Appender]}}.
 
 %% ----------------------------------------------------------------------------

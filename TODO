@@ -1,34 +1,20 @@
-# leg
- - [X] named appenders (separate name from module name)
- - [/] universal formatting specification
-    + [X] %t - time
-    + [X] %T - time with micros
-    + [X] %d - date
-    + [X] %m - message
-    + [X] %l - level
-    + [ ] %u - unix seconds
-    + [ ] %y - day of week
-    + [ ] %w - wall clock
-    + [ ] %p - pid
-    + [ ] %a - application
-    + [ ] somehow support specifying color regions (?)
- - [/] more appenders:
-    + [X] file appender
-        * [/] rotation on file size, handle max files
-		* [ ] rotation on time; day or hour
-    + [ ]  syslog appender
- - [/] error logger event handler (handle sasl, cowboy and webmachine logs)
-    + [X] sasl
-    + [ ] webmachine
-    + [ ] cowboy
- - [/] options per appender:
-    + [X] format
-    + [X] colorize: bool
-    + [ ] log-level
-    + [ ] format message length (ex. 1000 -> ~1000p in message format)
- - [ ] log to single appender only (extra argument to log call)
- - [ ] set default appenders: all | [atom()]
- - [ ] set what appender error_logger sends to
- - [ ] generic log function with level as arg
- - [ ] log terms, use #{opts=>{max_line_length, 10000}}
- - [ ] Better handling of setting log-levels dynamically
+# leg 2.0
+ - [X] structured logging
+    + [X] sort keys - level, time, event, rest...
+    + [X] simple format "(INFO[2017-05-09 18:36:55.768017] user_event user=tim)"
+       * [X] add colorized simple/tty format
+    + [X] json format
+    + [X] micro timestamps are broken as fuck
+ - [ ] streams/rivers
+ - [ ] proper README.md
+ - [ ] better error_logger_handler - structure the output
+ - [ ] simplify leg_appender_mgr (relevant?)
+ - [ ] documentation in the facade - type() for all possible options
+    * [ ] verify the options and refuse to add appender if faulty
+    * [ ] add posibillity to set appender options
+ - [ ] overhaul levels - remove dynamic levels in env and make them ad_hoc
+    + [ ] should be able to override 'level' key in logs
+ - [ ] add 'leg:get_log_level()' function
+
+# Bugs
+ - [ ] file appender broken - starts a new file everytime it crashes/restarts

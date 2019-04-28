@@ -49,7 +49,7 @@ handle_event(Event, #{opts:=_Opts} = State) ->
     {ok, State}.
 
 handle_call(_, State) ->
-    {ok, ok, State}.
+    {noreply, State}.
 
 %% Internal -------------------------------------------------------------------
 
@@ -73,8 +73,10 @@ clear_error_logger() ->
     [error_logger:delete_report_handler(element(1, H)) || H <- Handlers,
                                                           H /= ?MODULE].
 
-write_info_report(progress, [{application, App}, {started_at, Node}], Opts) ->
-    log(nfo, "~s: application ~p started at ~p", "PROGRESS", [App, Node], Opts);
+write_info_report(progress, [{application, _}, {started_at, _}] = Ps, _Opts) ->
+    leg:nfo(application_started, maps:from_list(Ps));
+%write_info_report(progress, [{application, App}, {started_at, Node}], Opts) ->
+    %log(nfo, "~s: application ~p started at ~p", "PROGRESS", [App, Node], Opts);
 write_info_report(progress, Event, Opts) ->
     log(dbg, "~s: ~100000p", "PROGRESS", [Event], Opts);
 write_info_report(std_info, [{application,App}, {exited,Reason}|_], Opts) ->
@@ -88,11 +90,11 @@ write_info_report(Type, Event, Opts) ->
     log(nfo, "~s: {~p, ~100000p}", "UNKNOWN", [Type, Event], Opts).
 
 write_error_report(crash_report, Error, Opts) ->
-    log(err, "~s: ~100000p", "CRASH", [Error], Opts);
+    log(crit, "~s: ~100000p", "CRASH", [Error], Opts);
 write_error_report(supervisor_report, Error, Opts) ->
-    log(err, "~s: ~100000p", "SUPERVISOR_REPORT", [Error], Opts);
+    log(crit, "~s: ~100000p", "SUPERVISOR_REPORT", [Error], Opts);
 write_error_report(std_error, Error, Opts) ->
-    log(err, "~s: {std_error, ~p}", "UNKNOWN", [Error], Opts);
+    log(crit, "~s: {std_error, ~p}", "UNKNOWN", [Error], Opts);
 write_error_report(Fmt, Args, _Opts) when is_list(Fmt) ->
     leg:err(Fmt, Args);
 write_error_report(Type, Event, Opts) ->

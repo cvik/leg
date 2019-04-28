@@ -53,32 +53,33 @@ list_appenders() ->
 
 %% Logging API ----------------------------------------------------------------
 
--spec nfo(iolist(), [term()]) -> ok.
+-spec nfo(iolist()|atom(), [term()]|map()) -> ok.
 nfo(Fmt, Args) ->
     leg_router:dispatch(compile_log(info, Fmt, Args)).
 
--spec dbg(iolist(), [term()]) -> ok.
+-spec dbg(iolist()|atom(), [term()]|map()) -> ok.
 dbg(Fmt, Args) ->
     leg_router:dispatch(compile_log(debug, Fmt, Args)).
 
--spec wrn(iolist(), [term()]) -> ok.
+-spec wrn(iolist()|atom(), [term()]|map()) -> ok.
 wrn(Fmt, Args) ->
     leg_router:dispatch(compile_log(warn, Fmt, Args)).
 
--spec err(iolist(), [term()]) -> ok.
+-spec err(iolist()|atom(), [term()]|map()) -> ok.
 err(Fmt, Args) ->
     leg_router:dispatch(compile_log(error, Fmt, Args)).
 
--spec crit(iolist(), [term()]) -> ok.
+-spec crit(iolist()|atom(), [term()]|map()) -> ok.
 crit(Fmt, Args) ->
     leg_router:dispatch(compile_log(crit, Fmt, Args)).
 
--spec fmt(atom(), iolist(), [term()]) -> ok.
+-spec fmt(atom(), iolist()|atom(), [term()]|map()) -> ok.
 fmt(Level, Fmt, Args) ->
     leg_router:dispatch(compile_log(Level, Fmt, Args)).
 
 %% Internal -------------------------------------------------------------------
 
-compile_log(Level, Fmt, Args) ->
-    Msg = iolist_to_binary(io_lib:format(Fmt, Args)),
-    #{level=>Level, msg=>Msg, ts=>os:timestamp()}.
+compile_log(Level, Fmt, Args) when is_list(Fmt), is_list(Args) ->
+    #{level=>Level, time=>os:timestamp(), event=>io_lib:format(Fmt, Args)};
+compile_log(Level, Event, Values) when is_map(Values) ->
+    Values#{level=>Level, time=>os:timestamp(), event=>Event}.

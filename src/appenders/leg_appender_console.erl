@@ -6,9 +6,10 @@
 
 %% leg_appender callbacks -----------------------------------------------------
 
-init(#{}) ->
-    {ok, #{}}.
+init(Opts) ->
+    {ok, #{opts=>Opts}}.
 
-handle_log_message(Message, State) ->
-    io:format("~ts~n", [Message]),
+handle_log_message(Log,  #{opts:=Opts} = State) ->
+    Line = leg_format:render(Log, Opts),
+    io:format("~ts~n", [Line]),
     {ok, State}.

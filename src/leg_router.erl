@@ -98,7 +98,7 @@ levels() ->
 maps_append(Key, Val, Map) ->
     case Map of
         #{Key:=PrevVal} ->
-            Map#{Key:=[Val|PrevVal]};
+            Map#{Key:=[V || {_,P} = V <- [Val|PrevVal], is_process_alive(P)]};
         _ ->
             Map#{Key=>[Val]}
     end.

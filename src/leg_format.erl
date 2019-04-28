@@ -4,60 +4,108 @@
 -module(leg_format).
 
 %% API
--export([render/3]).
+-export([render/2]).
 
 %% API ------------------------------------------------------------------------
 
-render(Spec, Log, Opts) when is_binary(Spec) ->
-    render(binary_to_list(Spec), Log, Opts);
-render(Spec, #{} = Log, #{} = Opts) ->
-    DefaultOpts = #{colorize=>false, timezone=>local},
-    parse_spec(Spec, Log, maps:merge(DefaultOpts, Opts)).
+render(Log, Opts) ->
+    DefaultOpts = #{colorize=>true, timezone=>utc,
+                    time_format=>default, format=>tty,
+                    re_sort=>true},
+    FullOpts = maps:merge(DefaultOpts, Opts),
+    render_parts(Log, FullOpts).
 
 %% Internal -------------------------------------------------------------------
 
-parse_spec(Spec, Log, Opts) ->
-    parse_spec(Spec, Log, Opts, []).
+render_parts(Log, #{format:=tty} = Opts) ->
+    render_tty(Log, Opts);
+render_parts(Log, #{format:=structured} = Opts) ->
+    string:join([render_part(Pair, Opts) || Pair <- maps:to_list(Log)], " ");
+render_parts(#{time:=Ts} = Log, #{format:=json} = Opts) ->
+    TsStr = render_ts(Ts, Opts#{colorize:=false}),
+    JsonMap = render_json(Log#{time=>TsStr}),
+    lejson:encode(JsonMap).
 
-parse_spec([$%, $d|Rest], #{ts:=Ts} = Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [ts(date, Ts, Opts)|Res]);
-parse_spec([$%, $t|Rest], #{ts:=Ts} = Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [ts(time, Ts, Opts)|Res]);
-parse_spec([$%, $T|Rest], #{ts:=Ts} = Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [ts(time_micro, Ts, Opts)|Res]);
-parse_spec([$%, $l|Rest], #{level:=Level} = Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [format_level(Level, Opts)|Res]);
-parse_spec([$%, $m|Rest], #{msg:=Msg} = Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [Msg|Res]);
-parse_spec([C|Rest], Log, Opts, Res) ->
-    parse_spec(Rest, Log, Opts, [C|Res]);
-parse_spec([], _, _, Res) ->
-    iolist_to_binary(lists:reverse(Res)).
+render_part({time, Ts}, #{format:=structured, colorize:=Colorize} = Opts) ->
+    ColorKey = colorize(key, to_iolist("time"), Colorize),
+    [ColorKey, "=", render_ts(Ts, Opts#{colorize:=false})];
+render_part({time, Ts}, Opts) ->
+    ["time=", render_ts(Ts, Opts)];
+render_part({level, Level}, #{format:=structured, colorize:=Colorize} = Opts) ->
+    ColorKey = colorize(key, to_iolist("level"), Colorize),
+    [ColorKey, "=", render_level(Level, Opts#{colorize:=false})];
+render_part({level, Level}, Opts) ->
+    ["level=", render_level(Level, Opts)];
+render_part({Key, Val}, #{colorize:=Colorize}) ->
+    ColorKey = colorize(key, to_iolist(Key), Colorize),
+    [io_lib:format("~ts", [ColorKey]), "=", to_iolist(Val), ""].
 
-ts(date, Ts, #{colorize:=Colorize, timezone:=Tz}) ->
-    {{Y, M, D}, _} = get_date_time(Ts, Tz),
-    colorize(date, [dt(Y), $-, dt(M), $-, dt(D)], Colorize);
-ts(time, Ts, #{colorize:=Colorize, timezone:=Tz}) ->
-    {_, {H, M, S}} = get_date_time(Ts, Tz),
-    colorize(time, [dt(H), $:, dt(M), $:, dt(S)], Colorize);
-ts(time_micro, {_, _, Micro} = Ts, #{colorize:=Colorize, timezone:=Tz}) ->
-    {_, {H, M, S}} = get_date_time(Ts, Tz),
-    MicroSecs = S + Micro / 1000000,
-    colorize(time, [dt(H), $:, dt(M), $:, ft(MicroSecs)], Colorize).
+render_tty(#{time:=Ts, level:=Level, event:=Event} = Log, Opts) ->
+    Values = maps:without([time, level, event], Log),
+    LevelStr = string:to_upper(render_level(Level, Opts)),
+    EventPadded = io_lib:format("~-30.30.\ss", [to_iolist(Event)]),
+    Main = [LevelStr, $[, render_ts(Ts, Opts), $], $ , EventPadded],
+    ValuePairs = [render_part(Pair, Opts) || Pair <- maps:to_list(Values)],
+    [Main, $\t | string:join(ValuePairs, " ")].
 
-get_date_time(Ts, local) ->
-    calendar:now_to_local_time(Ts);
-get_date_time(Ts, utc) ->
-    calendar:now_to_universal_time(Ts).
+to_iolist(T) when is_atom(T) -> atom_to_list(T);
+to_iolist(T) when is_integer(T) -> integer_to_list(T);
+to_iolist(T) when is_float(T) -> io_lib:format("~w", [T]);
+to_iolist(T) when is_pid(T) -> pid_to_list(T);
+to_iolist(T) when is_reference(T) -> ref_to_list(T);
+to_iolist(T) when is_binary(T) -> T;
+to_iolist(T) when is_list(T) -> T.
+
+render_json(Map) ->
+    F = fun(K, V, M) -> M#{K=>to_bin(V)} end,
+    maps:fold(F, #{}, Map).
+
+to_bin(T) when is_list(T) -> iolist_to_binary(T);
+to_bin(T) -> T.
+
+render_ts(NowTs, #{time_format:=TimeFormat, timezone:=Tz, colorize:=Colorize}) ->
+    Time = get_date_time(NowTs, Tz),
+    colorize(time, time_to_rfc3339(Time, TimeFormat), Colorize).
+
+time_to_rfc3339({{{Y,M,D},{HH,MM,SS}}, _}, default) ->
+    [dt(Y), $-, dt(M), $-, dt(D), $T, dt(HH), $:, dt(MM), $:, dt(SS), $Z];
+time_to_rfc3339({{{Y,M,D},{HH,MM,SS}}, Us}, micros) ->
+    MicrosStr = io_lib:format("~6.6.0w", [Us]),
+    [dt(Y), $-, dt(M), $-, dt(D), $T,
+     dt(HH), $:, dt(MM), $:, dt(SS), $., MicrosStr, $Z].
+
+get_date_time({_, _, Ms} = Ts, local) ->
+    {calendar:now_to_local_time(Ts), Ms};
+get_date_time({_, _, Ms} = Ts, utc) ->
+    {calendar:now_to_universal_time(Ts), Ms}.
 
 dt(I) when I < 10 -> [$0, $0+I];
 dt(I) -> integer_to_list(I).
 
-ft(F) when F < 10.0 -> [$0, float_to_list(F, [{decimals, 6}])];
-ft(F) -> float_to_list(F, [{decimals, 6}]).
+%ft(F) when F < 10.0 -> [$0, float_to_list(F, [{decimals, 6}])];
+%fr(F) -> float_to_list(F, [{decimals, 6}]).
 
-colorize(date, IoData, true) ->
-    ["\e[0;32m", IoData, "\e[0m"];
+render_level(crit, #{colorize:=Colorize, format:=tty}) ->
+    colorize(crit, "CRIT", Colorize);
+render_level(crit, #{colorize:=Colorize}) ->
+    colorize(crit, "crit", Colorize);
+render_level(error, #{colorize:=Colorize, format:=tty}) ->
+    colorize(error, "ERRO", Colorize);
+render_level(error, #{colorize:=Colorize}) ->
+    colorize(error, "error", Colorize);
+render_level(warn, #{colorize:=Colorize, format:=tty}) ->
+    colorize(warn, "WARN", Colorize);
+render_level(warn, #{colorize:=Colorize}) ->
+    colorize(warn, "warn", Colorize);
+render_level(info, #{colorize:=Colorize, format:=tty}) ->
+    colorize(info, "INFO", Colorize);
+render_level(info, #{colorize:=Colorize}) ->
+    colorize(info, "info", Colorize);
+render_level(debug, #{colorize:=Colorize, format:=tty}) ->
+    colorize(debug, "DEBU", Colorize);
+render_level(debug, #{colorize:=Colorize}) ->
+    colorize(debug, "debug", Colorize).
+
 colorize(time, IoData, true) ->
     ["\e[0;32m", IoData, "\e[0m"];
 colorize(crit, IoData, true) ->
@@ -70,16 +118,7 @@ colorize(info, IoData, true) ->
     ["\e[0;36m", IoData, "\e[0m"];
 colorize(debug, IoData, true) ->
     ["\e[0;35m", IoData, "\e[0m"];
+colorize(key, IoData, true) ->
+    ["\e[0;36m", IoData, "\e[0m"];
 colorize(_, IoData, false) ->
     IoData.
-
-format_level(crit, #{colorize:=Colorize}) ->
-    colorize(crit, "crit", Colorize);
-format_level(error, #{colorize:=Colorize}) ->
-    colorize(error, "error", Colorize);
-format_level(warn, #{colorize:=Colorize}) ->
-    colorize(warn, "warn", Colorize);
-format_level(info, #{colorize:=Colorize}) ->
-    colorize(info, "info", Colorize);
-format_level(debug, #{colorize:=Colorize}) ->
-    colorize(debug, "debug", Colorize).

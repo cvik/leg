@@ -8,7 +8,7 @@
 
 %% leg_appender callbacks -----------------------------------------------------
 
-init(#{path:=LogPath, name:=Name, max_size:=MaxSize}) ->
+init(#{path:=LogPath, name:=Name, max_size:=MaxSize} = Opts) ->
     Filename = setup_new_file(LogPath, Name),
     {ok, Fd} = file:open(Filename, [append]),
     Size = read_file_size(Filename),
@@ -17,22 +17,24 @@ init(#{path:=LogPath, name:=Name, max_size:=MaxSize}) ->
            path=>LogPath,
            file=>Filename,
            size=>Size,
-           max_size=>MaxSize}}.
+           max_size=>MaxSize,
+           opts=>Opts}}.
 
-handle_log_message(Message, State) ->
-    case should_rotate(Message, State) of
+handle_log_message(Log, #{opts:=Opts} = State) ->
+    Line = leg_format:render(Log, Opts),
+    case should_rotate(Line, State) of
         true ->
             {NewFd, Filename} = rotate_file(State),
             NewState = State#{fd:=NewFd,file:=Filename, size:=0},
-            handle_log_message(Message, NewState);
+            {ok, output_log(Line, NewState)};
         false ->
-            {ok, output_log(Message, State)}
+            {ok, output_log(Line, State)}
     end.
 
 %% Internal -------------------------------------------------------------------
 
 should_rotate(Message, #{size:=CurrentSize, max_size:=MaxSize}) ->
-    size(Message) + CurrentSize >= MaxSize.
+    iolist_size(Message) + CurrentSize >= MaxSize.
 
 rotate_file(#{fd:=Fd, path:=Path, name:=Name}) ->
     file:close(Fd),
@@ -47,8 +49,11 @@ read_file_size(Filename) ->
 
 output_log(Message, #{fd:=Fd, size:=Size} = State) ->
     io:format(Fd, "~ts~n", [Message]),
-    State#{size:=(Size+size(Message))}.
+    State#{size:=(Size+iolist_size(Message))}.
 
+%% TODO: Should only count files starting with Name
+%% TODO: Should check if it can continue on an old file instead of a new one
+%%       i.e. check if it's size < MaxSize
 setup_new_file(Path, Name) ->
     filelib:ensure_dir(filename:join([Path, "a"])),
     {ok, Files} = file:list_dir(Path),
